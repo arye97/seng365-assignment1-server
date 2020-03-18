@@ -15,7 +15,7 @@ module.exports = function (app) {
         .patch(petitions.change);
 
     app.route(app.rootUrl + '/petitions/:id')
-        .delete(petitions.delete);
+        .delete(petitions.remove);
 
     app.route(app.rootUrl + '/petitions/categories')
         .get(petitions.categories);
