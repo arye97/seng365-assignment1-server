@@ -11,19 +11,27 @@ delete - remove
 get - categories
  */
 
-exports.view = async function () {
-    let promises = [];
+exports.view = async function (petitionId) {
+   const selectSQL = '';
 
-    const sqlQuery = 'select * from ';
-    // const sql = await fs.readFile('app/resources/create_database.sql', 'utf8');
-    // promises.push(db.getPool().query(sql));  // sync call to recreate DB
-    //
-    // const files = await fs.readdir(photoDirectory);
-    // for (const file of files) {
-    //     if (file !== '.gitkeep') promises.push(fs.unlink(photoDirectory + file));  // sync call to delete photo
-    // }
-
-    return Promise.all(promises);  // async wait for DB recreation and photos to be deleted
+   try {
+       const petition = (await db.getPool().query(selectSQL, petitionId))[0];
+       if (petition) {
+           const photoLinks = await exports.getPetitionPhotos(petitionId);
+           return {
+               'petitionId': petition.id,
+               'title': petition.title,
+               'category': petition.category,
+               'authorName': petition.authorName,
+               'signatureCount': petition.signatureCount
+           };
+       } else {
+           return null;
+       }
+   } catch (error) {
+       console.log(error.sql);
+       throw error;
+   }
 };
 
 exports.add = async function () {

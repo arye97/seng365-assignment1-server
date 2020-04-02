@@ -12,5 +12,9 @@
     "humps": "^2.0.1",
     "mz": "^2.7.0",
     "mysql2": "^2.1.0"
+  },
+  "devDependencies": {
+    "bcrypt": "^4.0.1",
+    "email-validator": "^2.0.4"
   }
 }

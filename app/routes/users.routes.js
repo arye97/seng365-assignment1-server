@@ -15,5 +15,11 @@ module.exports = function (app) {
         .get(users.getData);
 
     app.route(app.rootURL + '/users/:id')
-        .patch(users.changeDetails)
-}
+        .patch(users.changeDetails);
+
+    app.root(app.rootUrl + '/users/:id/photo')
+        .get(users_photos.getProfilePhoto)
+        .put(users_photos.setProfilePhoto)
+        .delete(users_photos.deleteProfilePhoto);
+
+};
