@@ -1,7 +1,6 @@
 const backdoor = require('../controllers/backdoor.controller');
 
 module.exports = function (app) {
-
     //// FOR THE BACKDOOR ENDPOINT ////
     app.route(app.rootUrl + '/reset')
         .post(backdoor.resetDb);
@@ -14,5 +13,4 @@ module.exports = function (app) {
 
     app.route(app.rootUrl + '/executeSql')
         .post(backdoor.executeSql);
-
 };

@@ -18,8 +18,8 @@ module.exports = function (app) {
         .patch(users.changeDetails);
 
     app.root(app.rootUrl + '/users/:id/photo')
-        .get(users_photos.getProfilePhoto)
-        .put(users_photos.setProfilePhoto)
-        .delete(users_photos.deleteProfilePhoto);
+        .get(users.getProfilePhoto)
+        .put(users.setProfilePhoto)
+        .delete(users.deleteProfilePhoto);
 
 };
