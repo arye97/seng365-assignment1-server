@@ -1,25 +1,24 @@
 const users = require('../controllers/users.controller');
 
 module.exports = function (app) {
-
-    app.route(app.rootURL + '/users/register')
+    app.route(app.rootUrl + '/users/register')
         .post(users.register);
 
-    app.route(app.rootURL + '/users/login')
+    app.route(app.rootUrl + '/users/login')
         .post(users.login);
 
-    app.route(app.rootURL + '/users/logout')
+    app.route(app.rootUrl + '/users/logout')
         .post(users.logout);
 
     app.route(app.rootUrl + '/users/:id')
-        .get(users.getData);
+        .get(users.getUser);
 
-    app.route(app.rootURL + '/users/:id')
+    app.route(app.rootUrl + '/users/:id')
         .patch(users.changeDetails);
 
     app.root(app.rootUrl + '/users/:id/photo')
-        .get(users.getProfilePhoto)
-        .put(users.setProfilePhoto)
-        .delete(users.deleteProfilePhoto);
+        .get(users.getUserPhoto)
+        .put(users.setUserPhoto)
+        .delete(users.deleteUserPhoto);
 
 };
