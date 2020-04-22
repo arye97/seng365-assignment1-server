@@ -16,6 +16,7 @@
   "devDependencies": {
     "bcrypt": "^4.0.1",
     "email-validator": "^2.0.4",
-    "file-type": "^14.1.4"
+    "file-type": "^14.1.4",
+    "uid-generator": "^2.0.0"
   }
 }

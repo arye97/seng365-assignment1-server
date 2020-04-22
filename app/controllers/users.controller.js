@@ -1,14 +1,14 @@
 const Users = require('../models/users.model');
 
 exports.register = async function (req, res) {
-
     await Users.register(req.body.name, req.body.email, req.body.password, req.body.city, req.body.country)
         .then((result) => {
+
             let userDetails = {
                 "userId": result['user_id']
             };
             res.statusMessage = 'Created';
-            res.status(201).json(userDetails);
+            res.status(201).json(userDetails).send();
         }, (error) => {
             if (error.message === 'Bad Request' || error.code === 'ER_DUP_ENTRY') {
                 res.statusMessage = 'Bad Request';

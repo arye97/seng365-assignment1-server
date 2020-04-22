@@ -39,7 +39,7 @@ async function userExists(id) {
 
 exports.register = async function(name, email, password, city, country) {
     //checks if all the fields are there
-    if (!name || !email || !password || !city || !country) {
+    if (!name || !email || !password) {
         return Promise.reject(new Error("Bad Request"));
     }
     //checks if the password is long enough, ie > 1
@@ -50,11 +50,29 @@ exports.register = async function(name, email, password, city, country) {
     if (!emailValidator.validate(email)) {
         return Promise.reject(new Error("Bad Request"));
     }
+    let hashed_password = await passwords.hash(password);
+    let values = [name, email, hashed_password];
 
-    let queryString = "INSERT INTO User (name, email, await passwords.hash(password), city, country) VALUES (?,?,?,?,?)";
+    let queryString = `INSERT INTO User (name, email, password`;
+    let valuesQuery = `) VALUES (?, ?, ?`;
 
+    if (city !== undefined) {
+        values.push(city.toString());
+        queryString += ', city';
+        valuesQuery += ', ?';
+    }
+    if (country !== undefined) {
+        values.push(country.toString());
+        queryString += ', country';
+        valuesQuery += ', ?';
+    }
+
+    valuesQuery += ')';
+
+    queryString += valuesQuery;
+    console.log(queryString);
     try {
-        let response = await db.getPool.query(queryString, [name, email, password, city, country]);
+        let response = await db.getPool().query(queryString, values);
         return Promise.resolve(response);
     } catch (error) {
         return Promise.reject(error);
@@ -63,6 +81,7 @@ exports.register = async function(name, email, password, city, country) {
 };
 
 exports.login = async function(email, password) {
+    console.log('we got this far');
     let queryString;
     let value = [];
     if (!email || !password) {
@@ -71,6 +90,7 @@ exports.login = async function(email, password) {
         queryString = "SELECT user_id, password FROM User WHERE email = ?";
         value = [email]
     }
+    console.log('we got this far');
     try {
         let response = await db.getPool().query(queryString, value);
         if (response.length === 0) {

@@ -16,7 +16,7 @@ module.exports = function (app) {
     app.route(app.rootUrl + '/users/:id')
         .patch(users.changeDetails);
 
-    app.root(app.rootUrl + '/users/:id/photo')
+    app.route(app.rootUrl + '/users/:id/photo')
         .get(users.getUserPhoto)
         .put(users.setUserPhoto)
         .delete(users.deleteUserPhoto);
