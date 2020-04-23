@@ -70,7 +70,6 @@ exports.register = async function(name, email, password, city, country) {
     valuesQuery += ')';
 
     queryString += valuesQuery;
-    console.log(queryString);
     try {
         let response = await db.getPool().query(queryString, values);
         return Promise.resolve(response);
@@ -80,7 +79,7 @@ exports.register = async function(name, email, password, city, country) {
 
 };
 
-exports.login = async function(extra, email, password) {
+exports.login = async function(email, password) {
     let queryString;
     let value = [];
     if (!email || !password) {
@@ -97,7 +96,9 @@ exports.login = async function(extra, email, password) {
         if (await passwords.compare(response[0][0]['password'], password)) {
             let token = await uidgen.generate();
             await db.getPool().query("UPDATE User SET auth_token = ? WHERE user_id = ? ", [token, response[0][0]['user_id']]);
-            return Promise.resolve([response, token]);
+            let toReturn = [response[0][0]['user_id'], token];
+            console.log(toReturn);
+            return Promise.resolve(toReturn);
         } else {
             return Promise.reject(new Error("Bad Request"));
         }

@@ -339,7 +339,10 @@ exports.addPetition = async function (req, res) {
         .then((result) => {
             res.statusMessage = 'Created';
             res.status(201);
-            res.json(result[0][0]);
+            let id = {
+                "petitionId" : result
+            }
+            res.json(id);
         },
             (error) => {
                 if (error.message === 'Bad Request') {

@@ -5,12 +5,11 @@ const fs = require('fs');
 exports.register = async function (req, res) {
     await Users.register(req.body.name, req.body.email, req.body.password, req.body.city, req.body.country)
         .then((result) => {
-
             let userDetails = {
-                "userId": result['user_id']
+                "userId": result[0]['insertId']
             };
             res.statusMessage = 'Created';
-            res.status(201).json(userDetails).send();
+            res.status(201).json(userDetails);
         }, (error) => {
             if (error.message === 'Bad Request' || error.code === 'ER_DUP_ENTRY') {
                 res.statusMessage = 'Bad Request';
@@ -32,11 +31,12 @@ exports.register = async function (req, res) {
 
 exports.login = async function(req, res) {
     // Calling model method to log the user in
-    await Users.login(req.body.name, req.body.email, req.body.password)
+    await Users.login(req.body.email, req.body.password)
         .then((result) => {
                 // Forming json response
+                console.log(result);
                 let userData = {
-                    "userId": result[0][0]['user_id'],
+                    "userId": result[0],
                     "token": result[1]
                 };
                 // Sending the response

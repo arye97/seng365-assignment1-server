@@ -76,8 +76,6 @@ exports.viewAllPetitions = async function (startIndex, count, q, categoryId, aut
 };
 
 exports.addNewPetition = async function (petitionBody, token) {
-    console.log(petitionBody);
-    console.log(token);
     if (!token) {
         return Promise.reject(new Error("Unauthorized"));
     }
@@ -91,9 +89,8 @@ exports.addNewPetition = async function (petitionBody, token) {
     }
     let new_id = "SELECT max(petition_id) FROM Petition";
     let petition_id = await db.getPool().query(new_id);
-    petition_id = petition_id[0][0]['petition_id'];
+    petition_id = petition_id[0][0]['max(petition_id)'] + 1;
     let created_date = new Date().toISOString().slice(0, 20);
-    console.log(created_date);
     let queryString = "INSERT INTO Petition (petition_id, title, description, author_id, category_id, created_date, closing_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
     let categoryCheck = "SELECT COUNT(*) FROM Category WHERE category_id = ?";
     let values = [petition_id, petitionBody['title'], petitionBody['description'], user, petitionBody['categoryId'], created_date, petitionBody['closingDate']];
@@ -102,8 +99,8 @@ exports.addNewPetition = async function (petitionBody, token) {
         if (categoryResult[0]['COUNT(*)'] === 0) {
             return Promise.reject(new Error("Bad Request"));
         } else {
-            let result = await db.getPool().query(queryString, values);
-            return Promise.resolve(result);
+            await db.getPool().query(queryString, values);
+            return Promise.resolve(petition_id);
         }
     } catch(error) {
         return Promise.reject(error);
