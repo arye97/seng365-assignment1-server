@@ -28,7 +28,7 @@ async function getUser(token) {
         return null;
     }
     // Returning the user id
-    return userRow[0]['user_id'];
+    return userRow[0][0]['user_id'];
 }
 
 async function userExists(id) {
@@ -80,8 +80,7 @@ exports.register = async function(name, email, password, city, country) {
 
 };
 
-exports.login = async function(email, password) {
-    console.log('we got this far');
+exports.login = async function(extra, email, password) {
     let queryString;
     let value = [];
     if (!email || !password) {
@@ -90,15 +89,14 @@ exports.login = async function(email, password) {
         queryString = "SELECT user_id, password FROM User WHERE email = ?";
         value = [email]
     }
-    console.log('we got this far');
     try {
         let response = await db.getPool().query(queryString, value);
         if (response.length === 0) {
             return Promise.reject(new Error("Bad Request"));
         }
-        if (await passwords.compare(response[0]['password'], password)) {
+        if (await passwords.compare(response[0][0]['password'], password)) {
             let token = await uidgen.generate();
-            await db.getPool.query("UPDATE User SET auth_token = ? WHERE user_id = ? ", [token, response[0]['user_id']]);
+            await db.getPool().query("UPDATE User SET auth_token = ? WHERE user_id = ? ", [token, response[0][0]['user_id']]);
             return Promise.resolve([response, token]);
         } else {
             return Promise.reject(new Error("Bad Request"));
@@ -109,6 +107,7 @@ exports.login = async function(email, password) {
 };
 
 exports.logout = async function(token) {
+
     let user = await getUser(token);
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
@@ -122,21 +121,63 @@ exports.logout = async function(token) {
     }
 };
 
-exports.getUser = async function(token) {
-    if (!token) {
-        return null;
+exports.getUserData = async function(id, token) {
+    ////cover the get 'me' endpoint
+    if (id === null || id === undefined) {
+        console.log("we're here now");
+        if (!token) {
+            return Promise.reject(new Error('Bad Request'));
+        }
+        let user = await getUser(token);
+        if (!user) {
+            return Promise.reject(new Error('Bad Request'));
+        }
+        let queryString = "SELECT name, city, country, email FROM User WHERE user_id = ?";
+        try{
+            console.log(user);
+            let userData = await db.getPool().query(queryString, user);
+            console.log(userData);
+
+            if (userData.length === 0) {
+                return Promise.reject(new Error('Not Found'));
+            }
+            return Promise.resolve(userData);
+        } catch(error) {
+            // Rejecting promise as an error was thrown
+            return Promise.reject(error);
+        }
+
     }
-    let queryString = "SELECT user_id FROM User WHERE auth_token = ?";
+    let user_tokenString = "SELECT auth_token FROM User WHERE user_id = ?";
+    let queryString = "SELECT name, city, country";
+    let user_token = await db.getPool().query(user_tokenString, id);
+    if (user_token[0][0]['auth_token'] === token) {
+        queryString += ', email';
+    }
+    let valueString = " FROM User WHERE user_id = ?";
+    queryString += valueString;
     //userData will be the row of data returned from database
-    let userData = await db.getPool().query(queryString, token);
-    if (userData.length <= 0) {
-        return null
+    try{
+        let userData = await db.getPool().query(queryString, id);
+
+        if (userData.length === 0) {
+            return Promise.reject(new Error('Not Found'));
+        }
+        return Promise.resolve(userData);
+    } catch(error) {
+        // Rejecting promise as an error was thrown
+        return Promise.reject(error);
     }
-    return userData[0]['user_id'];
+
 };
 
 exports.changeDetails = async function(name, email, password, currentPassword, city, country, token, id) {
     ///This is a pretty disgusting function sorry bout that
+
+
+    if (!token) {
+        return Promise.reject(new Error("Unauthorized"));
+    }
 
     let user = await getUser(token);
     if (!user) {
@@ -193,10 +234,6 @@ exports.changeDetails = async function(name, email, password, currentPassword, c
         args.push("password = ?");
         queryVals.push(password);
     }
-    if (currentPasswordValidity) {
-        args.push("currentPassword = ?");
-        queryVals.push(currentPassword);
-    }
     if (cityValidity) {
         args.push("city = ?");
         queryVals.push(city);
@@ -206,19 +243,36 @@ exports.changeDetails = async function(name, email, password, currentPassword, c
         queryVals.push(country);
     }
 
-    let updateQuery = "UPDATE User SET " + args.join(", ") + "WHERE user_id = ?";
-    let checkUser = "SELECT COUNT(*) FROM User WHERE user_id = ?";
-    queryVals.push(id);
 
+    //Check the current_password is equal to preset password
+    let passwordQuery = "SELECT password FROM User WHERE user_id = ?";
     try {
-        let resultUser = await db.getPool().query(checkUser, id);
+        let passwordCheck = await db.getPool().query(passwordQuery, user);
+        console.log(passwordCheck);
+        if (!await passwords.compare(passwordCheck, currentPassword)) {
+            return Promise.reject(new Error("Bad Request"));
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    let updateQuery = "UPDATE User SET " + args.join(", ") + " WHERE user_id = ?";
+    console.log(updateQuery);
+    let checkUser = "SELECT COUNT(*) FROM User WHERE user_id = ?";
+    queryVals.push(user);
+    console.log(checkUser);
+    try {
+        console.log(user);
+        let resultUser = await db.getPool().query(checkUser, user);
+        console.log("checkUser Worked");
         if (resultUser[0]['COUNT(*)'] === 0) {
             return Promise.reject(new Error("Not Found"));
         }
-        if (user != parseInt(id, 10)) {
+        if (user != parseInt(user, 10)) {
             return Promise.reject(new Error("Forbidden"));
         }
         let result = await db.getPool().query(updateQuery, queryVals);
+        console.log("updateQuery worked");
         return Promise.resolve(result);
     } catch(err) {
         return Promise.reject(err);
@@ -236,24 +290,35 @@ deleteUserPhoto
  */
 
 exports.getUserPhoto = async function(id, token) {
+    let user;
+    let isNull = false;
+    if (id === null || id === undefined || id === 'null') {
+        isNull = true;
+        if (!token) {
+            return Promise.reject(new Error('Unauthorized'));
+        }
+        user = await getUser(token);
+        if (!user) {
+            return Promise.reject(new Error('Not Found'));
+        }
+    }
 
-    if (!token) {
-        return Promise.reject(new Error("Not Found"));
-    }
-    let user = await getUser(token);
-    if (!user) {
-        return Promise.reject(new Error("Unauthorized"));
-    }
-    let queryString = "SELECT photo_filename FROM Petition WHERE petition_id = ?";
+    let queryString = "SELECT photo_filename FROM User WHERE user_id = ?";
     try {
-        let checkPhotoQuery = await db.getPool().query(queryString, id);
-        let filename = checkPhotoQuery[0]['photo_filename'];
+        let checkPhotoQuery;
+        if (isNull === false) {
+            checkPhotoQuery = await db.getPool().query(queryString, id);
+        } else {
+            checkPhotoQuery = await db.getPool().query(queryString, user);
+        }
+        let filename = checkPhotoQuery[0][0]['photo_filename'];
         if (!filename) {
             return Promise.reject(new Error("Not Found"));
         }
         let photo = await fs.readFile('storage/photos/' + filename);
         return Promise.resolve(photo);
     } catch (error) {
+        console.error(error);
         return Promise.reject(error);
     }
 };

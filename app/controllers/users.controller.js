@@ -1,4 +1,6 @@
 const Users = require('../models/users.model');
+const fileType = require('file-type');
+const fs = require('fs');
 
 exports.register = async function (req, res) {
     await Users.register(req.body.name, req.body.email, req.body.password, req.body.city, req.body.country)
@@ -87,45 +89,43 @@ exports.logout = async function(req, res) {
 };
 
 exports.getUser = async function (req, res) {
-  await Users.getUser(req.params.id, req.headers['x-authorization'])
-      .then((result) => {
-          let userDetails;
-          if (result[1]) {
-              userDetails = {
-                  "name" : result[0]['name'],
-                  "email" : result[0]['email'],
-                  "password" : result[0]['password'],
-                  "city" : result[0]['city'],
-                  "country" : result[0]['country']
-               }
-          } else {
-              ///If the user isn't authenticated
-              userDetails = {
-                  "name" : result[0]['name'],
-                  "city" : result[0]['city'],
-                  "country" : result[0]['country']
-              }
-          }
-          res.statusMessage = 'OK';
-          res.json(userDetails);
-      },
-          (error) => {
-            if (error.message === 'Not Found') {
-                res.statusMessage = 'Not Found';
-                res.status(404).send('User: ' + req.params.id + ' Not Found');
-            } else {
-                console.log(error);
+    await Users.getUserData(+req.params.id, req.headers['x-authorization'])
+        .then((result) => {
+                let userDetails;
+                if (result[1][3]) {
+                    userDetails = {
+                        "name" : result[0][0]['name'],
+                        "city" : result[0][0]['city'],
+                        "country" : result[0][0]['country'],
+                        "email" : result[0][0]['email']
+                    };
+                } else {
+                    userDetails = {
+                        "name": result[0][0]['name'],
+                        "city": result[0][0]['city'],
+                        "country": result[0][0]['country']
+                    }
+                }
+                res.statusMessage = 'OK';
+                res.json(userDetails);
+            },
+            (error) => {
+                if (error.message === 'Not Found') {
+                    res.statusMessage = 'Not Found';
+                    res.status(404).send('User: ' + req.params.id + ' Not Found');
+                } else {
+                    console.log(error);
+                    res.statusMessage = 'Internal Server Error';
+                    res.status(500).send('Internal Server Error');
+                }
+            }
+        ).catch(
+            (error) => {
+                console.error(error);
                 res.statusMessage = 'Internal Server Error';
                 res.status(500).send('Internal Server Error');
             }
-          }
-      ).catch(
-          (error) => {
-              console.error(error);
-              res.statusMessage = 'Internal Server Error';
-              res.status(500).send('Internal Server Error');
-          }
-      );
+        );
 };
 
 exports.changeDetails = async function (req, res) {
@@ -163,13 +163,14 @@ exports.changeDetails = async function (req, res) {
 };
 
 exports.getUserPhoto = async function (req, res) {
-    await Users.getUserPhoto(req.params.id)
+    await Users.getUserPhoto(req.params.id, req.headers['x-authorization'])
         .then((photo) => {
             res.statusMessage = 'OK';
             res.contentType(fileType(photo)['ext']);
             res.status(200).send(photo);
         },
             (error) => {
+                console.error(error);
                 if (error.message === 'Not Found') {
                     res.statusMessage = 'Not Found';
                     res.status(404).send('Not Found');
@@ -180,6 +181,7 @@ exports.getUserPhoto = async function (req, res) {
             }
         ).catch(
             (error) => {
+                console.error(error);
                 res.statusMessage = 'Internal Server Error';
                 res.status(500).send('Internal Server Error');
             }

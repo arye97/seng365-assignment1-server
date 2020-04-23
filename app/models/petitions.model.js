@@ -19,82 +19,86 @@ async function getUser(token) {
     if (userRow.length < 1) {
         return null;
     }
-    return userRow[0]['user_id'];
+    return userRow[0][0]['user_id'];
 }
 
 
 
 exports.viewAllPetitions = async function (startIndex, count, q, categoryId, authorId, sortBy) {
-    let argsWhere = [];
-    let argsValues = [];
-    let argsSort = null;
-    if (count) {
-        argsWhere.push("count = ?");
-        argsValues.push(count);
-    }
-    if (q) {
-        argsWhere.push("title LIKE ?");
-        argsValues.push('%' + q + '%');
-    }
-    if (categoryId) {
-        argsWhere.push("categoryId = ?");
-        argsValues.push(categoryId);
-    }
-    if (authorId) {
-        argsWhere.push("authorId = ?");
-        argsValues.push(authorId);
-    }
+    /*
+    [
+      {
+        "petitionId": 1,
+        "title": "Increase the education budget",
+        "category": "Animals",
+        "authorName": "Adam Anderson",
+        "signatureCount": 42
+      }
+    ]
+     */
+
+    let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
+                    "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
+                    "FROM Petition AS p " +
+                    "INNER JOIN Category AS c ON p.category_id = ? " +
+                    "INNER JOIN User AS u ON p.author_id = ? ";
+
+    let argsSort;
     if (sortBy) {
         if (sortBy === 'ALPHABETICAL_ASC') {
-            argsSort = ' ORDER BY petition_title ASC';
+            argsSort = ' ORDER BY p.title ASC';
         } else if (sortBy === 'ALPHABETICAL_DESC') {
-            argsSort = ' ORDER BY petition_title DESC';
+            argsSort = ' ORDER BY p.title DESC';
         } else if (sortBy === 'SIGNATURES_ASC') {
-            argsSort = ' ORDER BY signature_id ASC';
+            argsSort = ' ORDER BY s.signatory_id ASC';
         } else if (sortBy === 'SIGNATURES_DESC') {
-            argsSort = ' ORDER BY signature_id DESC';
+            argsSort = ' ORDER BY s.signatory_id DESC';
         } else {
-            argsSort = ' ORDER BY signature_id DESC';
+            argsSort = ' ORDER BY s.signatory_id DESC';
         }
     } else {
-        argsSort = ' ORDER BY signature_id DESC';
+        argsSort = ' ORDER BY s.signatory_id DESC';
     }
-    let queryString = "SELECT Petiton.petitionId, Petition.title, categoryId, count";
-    let primaryPhotoQuery = "SELECT Petition.petitionId, photo_filename FROM Petition LEFT OUTER JOIN PetitionPhoto PP on Petition.petitionId = PP.petitionId";
-    if (argsWhere.length > 0) {
-        queryString += " WHERE " + argsWhere.join(" AND ");
-    }
-    queryString += " GROUP BY Petition.petitionId";
-    if (argsSort) {
-        queryString += argsSort;
-    }
+
+    //
+    // queryString += " GROUP BY p.petition_id";
+    // if (argsSort) {
+    //     queryString += argsSort;
+    // }
+    console.log(queryString);
     try {
-        let petitionRows = await db.getPool().query(queryString, argsValues)
-        let photoRows = await db.getPool.query(primaryPhotoQuery);
-        let rows = [petitionRows, photoRows]
-        return Promise.resolve(rows);
+        let petitionRows = await db.getPool().query(queryString, [categoryId, authorId]);
+
+        return Promise.resolve(petitionRows);
     } catch(error) {
         return Promise.reject(error);
     }
 };
 
 exports.addNewPetition = async function (petitionBody, token) {
-    //TODO
+    console.log(petitionBody);
+    console.log(token);
     if (!token) {
         return Promise.reject(new Error("Unauthorized"));
     }
     let user = await getUser(token);
+    console.log(user);
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
     }
     if (!petitionBody['title'] || !petitionBody['description'] || !petitionBody['categoryId'] || petitionBody['closingDate'] < new Date(new Date().toUTCString())) {
         return Promise.reject(new Error('Bad Request'));
     }
-    let queryString = "INSERT INTO Petition (title, description, categoryId, closingDate)";
-    let categoryCheck = "SELECT COUNT(*) FROM PetitionCategory WHERE category_id = ?";
-    let values = [petitionBody['title'], petitionBody['description'], petitionBody['category_id'], petitionBody['closingDate']]
+    let new_id = "SELECT max(petition_id) FROM Petition";
+    let petition_id = await db.getPool().query(new_id);
+    petition_id = petition_id[0][0]['petition_id'];
+    let created_date = new Date().toISOString().slice(0, 20);
+    console.log(created_date);
+    let queryString = "INSERT INTO Petition (petition_id, title, description, author_id, category_id, created_date, closing_date) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    let categoryCheck = "SELECT COUNT(*) FROM Category WHERE category_id = ?";
+    let values = [petition_id, petitionBody['title'], petitionBody['description'], user, petitionBody['categoryId'], created_date, petitionBody['closingDate']];
     try {
-        let categoryResult = await db.getPool().query(categoryCheck, petitionBody['category_id']);
+        let categoryResult = await db.getPool().query(categoryCheck, petitionBody['categoryId']);
         if (categoryResult[0]['COUNT(*)'] === 0) {
             return Promise.reject(new Error("Bad Request"));
         } else {
@@ -107,24 +111,33 @@ exports.addNewPetition = async function (petitionBody, token) {
 };
 
 exports.getOnePetition = async function (id) {
-    //TODO
-    let queryString = "SELECT p.petition_id AS petitionId," +
-                      "p.title AS title," +
-                      "c.name AS category," +
-                      "u.name AS authorName," +
-                      "(SELECT COUNT(*) FROM Signature AS s " +
-                      "WHERE p.petition_id = s.petition_id) AS signatureCount" +
-                      "FROM Petition AS p" +
-                      "INNER JOIN Category AS c ON p.category_id = c.category_id" +
-                      "INNER JOIN User AS u ON p.author_id = u.user_id";
-    let photoQueryString = "SELECT photo_filename, photo_description, is_primary FROM PetitionPhoto WHERE petition_id = ?";
+    /*
+    {
+      "petitionId": 1,
+      "title": "Increase the education budget",
+      "category": "Animals",
+      "authorName": "Adam Anderson",
+      "signatureCount": 42,
+      "description": "Schools need more money.",
+      "authorId": 11,
+      "authorCity": "Christchurch",
+      "authorCountry": "New Zealand",
+      "createdDate": "2012-04-23T18:25:43.511Z",
+      "closingDate": "2012-04-23T18:25:43.511Z"
+    }
+     */
+    let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
+        "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount, p.description AS description, " +
+        "p.author_id AS authorId, u.city AS authorCity, u.country AS authorCountry, p.created_date AS createdDate, p.closing_date AS " +
+        "closingDate FROM Petition AS p INNER JOIN Category AS c ON p.category_id = c.category_id INNER JOIN User AS u ON " +
+        "p.author_id = u.user_id WHERE p.petition_id = ?";
     try {
-        let petitionRows = await db.getPool().query(queryString);
+        let petitionRows = await db.getPool().query(queryString, id);
+        console.log(petitionRows[0][0]);
         if (petitionRows.length === 0) {
             return Promise.reject(new Error('Not Found'))
         } else {
-            let photoRows = await db.getPool().query(photoQueryString, id);
-            return Promise.resolve([petitionRows[0], photoRows]);
+            return Promise.resolve(petitionRows[0]);
         }
     } catch (error) {
         return Promise.reject(error);
@@ -201,7 +214,7 @@ exports.changePetition = async function (petitionBody, id, token) {
     values.push(id);
     try {
         //Check petition exists
-        let checkPetitionId = await db.getPool().query(idCheck, id);
+        let checkPetitionId = await db.getPool().query(checkExistString, id);
         if (checkPetitionId[0]['COUNT(*)'] === 0) {
             return Promise.reject(new Error("Not Found"));
         }
@@ -222,29 +235,36 @@ exports.changePetition = async function (petitionBody, id, token) {
 };
 
 exports.removePetition = async function (id, token) {
-    //TODO
     let user = await getUser(token);
     //user is the user_id we need
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
     }
-    //make up the queries
-    let deletePetitionQuery = "DELETE FROM Petition as Petition WHERE petition_id = ? AND p.author_id = u.user_id"
+    let petitionIdQuery = "SELECT petition_id FROM Petition WHERE author_id = ?";
+    let petitionId = await db.getPool().query(petitionIdQuery, user);
+    petitionId = petitionId[0][0]['petition_id'];
+    if (parseInt(id, 10) !== petitionId) {
+        console.log('theyre not the same');
+        return Promise.reject(new Error("Unauthorized"));
+    }
+    let deletePetitionQuery = "DELETE FROM Petition WHERE petition_id = ? AND author_id = ?";
     try {
         // remove the petition from Petition table
-        let response = await db.getPool().query(deletePetitionQuery, [id, user])
+        let response = await db.getPool().query(deletePetitionQuery, [id, user]);
         return Promise.resolve(response);
     } catch(error) {
+        console.log(error);
         return Promise.reject(error);
     }
 };
 
 exports.getAllCategories = async function () {
-    //TODO
+    console.log('did we get here?');
     let queryString = "SELECT * FROM Category";
     try {
         let categoryRows = await db.getPool().query(queryString);
-        return Promise.resolve(categoryRows);
+        console.log(categoryRows[0]);
+        return Promise.resolve(categoryRows[0]);
     } catch(error) {
         return Promise.reject(error)
     }
@@ -324,17 +344,11 @@ exports.removeSignature = async function(id, token) {
  */
 
 exports.getPetitionHeroImage = async function(id, token) {
-    if (!token) {
-        return Promise.reject(new Error("Not Found"));
-    }
-    let user = await getUser(token);
-    if (!user) {
-        return Promise.reject(new Error("Unauthorized"));
-    }
+
     let queryString = "SELECT photo_filename FROM Petition WHERE petition_id = ?";
     try {
         let checkPhotoQuery = await db.getPool().query(queryString, id);
-        let filename = checkPhotoQuery[0]['photo_filename'];
+        let filename = checkPhotoQuery[0][0]['photo_filename'];
         if (!filename) {
             return Promise.reject(new Error("Not Found"));
         }
@@ -346,17 +360,29 @@ exports.getPetitionHeroImage = async function(id, token) {
 };
 
 exports.setPetitionHeroImage = async function(id, token, imageRequestBody) {
-    let user = await getUser(token);
+    console.log(token);
     if (!token) { return Promise.reject(new Error("Not Found"));}
+    let user = await getUser(token);
     if (!user) { return Promise.reject(new Error("Unauthorized"));}
-    if (user !== parseInt(id, 10)) { return Promise.reject(new Error("Forbidden")); }
-    let filename = "petition" + id + fileType(imageRequestBody)['ext'];
-    let checkPhotoQuery = "SELECT photo_filename FROM Petition WHERE petition_id = ? AND author_id = ?";
+    console.log(user);
+    console.log('we got this far!');
+    let petitionQuery = "SELECT petition_id FROM Petition WHERE author_id = ?";
+    let petitionId = await db.getPool().query(petitionQuery, user);
+    petitionId = petitionId[0][0]['petition_id'];
+    console.log(petitionId);
+    if (petitionId !== parseInt(id, 10)) { return Promise.reject(new Error("Forbidden")); }
+    console.log('here we are');
+    let filename = "petition" + petitionId + fileType(imageRequestBody)['ext'];
+    console.log(filename);
+    console.log('here we are');
+    let checkPhotoQuery = "SELECT photo_filename FROM Petition WHERE petition_id = ?";
     let updateQuery = "UPDATE Petition SET photo_filename = ? WHERE user_id = ?";
 
     try {
         let code = 200;
-        let checkPhoto = await db.getPool().query(checkPhotoQuery, [id, user]);
+        console.log('we got this far!');
+        let checkPhoto = await db.getPool().query(checkPhotoQuery, id);
+        console.log(checkPhoto);
         if (!checkPhoto[0]['photo_filename']) {
             code = 201;
         } else {
