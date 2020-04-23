@@ -1,4 +1,7 @@
 require('dotenv').config();
+require('bcrypt');
+require('file-type');
+
 const db = require('./config/db');
 const express = require('./config/express');
 
