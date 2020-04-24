@@ -35,7 +35,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
       }
     ]
      */
-    let filters = ['startIndex', 'count', 'q', 'categoryId', 'authorId', 'sortBy'];
+    let filters = [startIndex, count, q, categoryId, authorId, sortBy];
     let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
             "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
             "FROM Petition AS p " +
@@ -47,7 +47,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     let notFinished = true;
     let whereAdded = false;
     let canAddAnd = false;
-
+    console.log(filters);
     for (let filter in filters) {
         if (!filters[filter]) {
             continue;
@@ -82,35 +82,25 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
         } else if (sortBy === 'ALPHABETICAL_DESC') {
             argsSort = ' ORDER BY p.title DESC';
         } else if (sortBy === 'SIGNATURES_ASC') {
-            argsSort = ' ORDER BY s.signatory_id ASC';
+            argsSort = ' ORDER BY signatureCount ASC';
         } else if (sortBy === 'SIGNATURES_DESC') {
-            argsSort = ' ORDER BY s.signatory_id DESC';
+            argsSort = ' ORDER BY signatureCount DESC';
         } else {
-            argsSort = ' ORDER BY s.signatory_id DESC';
+            argsSort = ' ORDER BY signatureCount DESC';
         }
     } else {
-        argsSort = ' ORDER BY s.signatory_id DESC';
+        argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
     }
-
-    //
-    // queryString += " GROUP BY p.petition_id";
-    // if (argsSort) {
-    //     queryString += argsSort;
-    // }
     console.log(queryString);
-    try {
-        console.log([categoryId, authorId, startIndex, q]);
-        let [petitionRows] = await db.getPool().query(queryString, values);
-        if (startIndex) {
-            petitionRows = petitionRows.slice(startIndex);
-        }
-        if (count) {
-            petitionRows = petitionRows.slice(0, count);
-        }
-        return Promise.resolve(petitionRows);
-    } catch(error) {
-        return Promise.reject(error);
+    let [petitionResults] = await db.getPool().query(queryString, values);
+    if (startIndex) {
+        petitionResults = petitionResults.slice(startIndex);
     }
+    if (count) {
+        petitionResults = petitionResults.slice(0, count);
+    }
+    console.log(petitionResults);
+    return Promise.resolve(petitionResults);
 };
 
 exports.addNewPetition = async function (petitionBody, token) {
