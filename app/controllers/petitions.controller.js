@@ -4,7 +4,6 @@ const db = require('../../config/db');
 
 
 exports.viewAllDetailedPetitions = async function (req, res) {
-
     await Petitions.viewAllDetailedPetitions(req.query.startIndex, req.query.count, req.query.q, req.query.categoryId, req.query.authorId, req.query.sortBy)
         .then((rows) => {
                 let petitionRows = rows[0];

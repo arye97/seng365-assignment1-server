@@ -35,22 +35,39 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
       }
     ]
      */
-    let queryString;
-    if (!startIndex && !count && !q && !categoryId && !authorId && !sortBy) {
-        queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
+    let filters = [startIndex, count, q, categoryId, authorId, sortBy];
+    let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
             "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
             "FROM Petition AS p " +
             "INNER JOIN Category AS c ON p.category_id = c.category_id " +
             "INNER JOIN User AS u ON p.author_id = u.user_id";
 
-    } else {
-        queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
-            "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
-            "FROM Petition AS p " +
-            "INNER JOIN Category AS c ON p.category_id = ? " +
-            "INNER JOIN User AS u ON p.author_id = ? " +
-            "WHERE p.petition_id >= ? AND Locate(p.title, ?)!=0";
+
+    let values = [];
+    let whereAdded = false;
+
+    for (let filter in filters) {
+        if (!filters[filter]) {
+            continue;
+        }
+        if (!whereAdded) {
+            queryString += ' WHERE ';
+            whereAdded = true;
+        } else {
+            queryString += 'AND ';
+        }
+        if (filter === 'q') {
+            queryString += 'p.title LIKE ? ';
+            values.push('%' + filters[filter] + '%');
+        } else if (filter === 'categoryId') {
+            queryString += 'p.category_id = ?';
+            values.push(filters[filter]);
+        } else if (filter === 'authorId') {
+            queryString += 'p.author_id = ? ';
+            values.push(filters[filter]);
+        }
     }
+
     let argsSort;
     if (sortBy) {
         if (sortBy === 'ALPHABETICAL_ASC') {
@@ -77,7 +94,12 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     try {
         console.log([categoryId, authorId, startIndex, q]);
         let petitionRows = await db.getPool().query(queryString, [categoryId, authorId, startIndex, q]);
-
+        if (startIndex) {
+            petitionRows = petitionRows.slice(startIndex);
+        }
+        if (count) {
+            petitionRows = petitionRows.slice(0, count);
+        }
         return Promise.resolve(petitionRows);
     } catch(error) {
         return Promise.reject(error);
