@@ -77,21 +77,20 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     let argsSort;
     if (sortBy) {
         if (sortBy === 'ALPHABETICAL_ASC') {
-            argsSort = ' ORDER BY p.title ASC';
+            argsSort = ' ORDER BY p.title ASC, petitionId ASC';
         } else if (sortBy === 'ALPHABETICAL_DESC') {
-            argsSort = ' ORDER BY p.title DESC';
+            argsSort = ' ORDER BY p.title DESC, petitionId ASC';
         } else if (sortBy === 'SIGNATURES_ASC') {
-            argsSort = ' ORDER BY signatureCount ASC';
+            argsSort = ' ORDER BY signatureCount ASC, petitionId ASC';
         } else if (sortBy === 'SIGNATURES_DESC') {
-            argsSort = ' ORDER BY signatureCount DESC';
+            argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
         } else {
-            argsSort = ' ORDER BY signatureCount DESC';
+            argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
         }
     } else {
         argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
     }
 
-    console.log(queryString);
     let [petitionResults] = await db.getPool().query(queryString, values);
     if (startIndex) {
         petitionResults = petitionResults.slice(startIndex);
