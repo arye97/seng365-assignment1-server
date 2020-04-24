@@ -36,7 +36,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     ]
      */
     let queryString;
-    if (!startIndex || !count || !q || !categoryId || !authorId || !sortBy) {
+    if (!startIndex && !count && !q && !categoryId && !authorId && !sortBy) {
         queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
             "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
             "FROM Petition AS p " +
