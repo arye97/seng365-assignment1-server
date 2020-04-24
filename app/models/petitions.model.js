@@ -333,16 +333,20 @@ exports.getAllCategories = async function () {
  */
 
 exports.getPetitionSignatures = async function(id) {
-    let queryString = "SELECT s.signatory_id, u.name, u.city, u.country, s.signed_date  FROM Signature AS s INNER JOIN User AS u ON s.signatory_id = u.user_id WHERE petition_id = ? " +
-    "ORDER_BY s.signed_date ASC";
+    let queryString = "SELECT s.signatory_id, u.name, u.city, u.country, s.signed_date  FROM Signature AS s INNER JOIN User AS u ON s.signatory_id = u.user_id WHERE petition_id = ? ORDER BY s.signed_date ASC";
 
     try {
-        let response = await db.getPool(queryString, id);
+        let response = await db.getPool().query(queryString, id);
         if (!response) {
             return Promise.reject("Not Found");
         }
-        return Promise.resolve(response);
+        let petitionSignatures = [];
+        for (let i in response[0]) {
+            petitionSignatures.push(response[0][i]);
+        }
+        return Promise.resolve(petitionSignatures);
     } catch (error) {
+        console.error(error);
         return Promise.reject(error);
     }
 

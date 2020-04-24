@@ -326,9 +326,6 @@ exports.setUserPhoto = async function(id, token, imageRequestBody) {
 
     //check if a user doesnt already have a photo
 
-    if (fileType(imageRequestBody)['ext'] !== ('.png' || '.jpg' || '.jpeg' || '.gif')) {
-        return Promise.reject(new Error("Bad Request"))
-    }
     let filename = "petition" + id + fileType(imageRequestBody)['ext'];
     let checkPhotoQuery = "SELECT photo_filename FROM User WHERE user_id = ?";
     let updateQuery = "UPDATE User SET photo_filename = ? WHERE user_id = ?";
