@@ -328,10 +328,15 @@ exports.getUserPhoto = async function(id, token) {
 
 exports.setUserPhoto = async function(id, token, imageRequestBody) {
 
+
     if (!token) { return Promise.reject(new Error("Not Found"));}
     let user = await getUser(token);
     if (!user) { return Promise.reject(new Error("Unauthorized"));}
     if (user !== parseInt(id, 10)) { return Promise.reject(new Error("Forbidden")); }
+
+    //check if a user doesnt already have a photo
+
+
     let filename = "petition" + id + fileType(imageRequestBody)['ext'];
     let checkPhotoQuery = "SELECT photo_filename FROM User WHERE user_id = ?";
     let updateQuery = "UPDATE User SET photo_filename = ? WHERE user_id = ?";

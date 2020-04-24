@@ -192,6 +192,7 @@ exports.setUserPhoto = async function (req, res) {
   let photoBody = Buffer.from(req.body);
   await Users.setUserPhoto(req.params.id, req.headers['x-authorisation'], photoBody)
       .then((code) => {
+          res.status(201);
           res.sendStatus(code);
           },
           (error) => {
