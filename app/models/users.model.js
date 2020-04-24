@@ -34,7 +34,8 @@ async function getUser(token) {
 async function userExists(id) {
     let queryString = "SELECT COUNT(*) FROM User WHERE user_id = ?";
     let are_they_real = await db.getPool().query(queryString, id);
-    return are_they_real[0]['COUNT(*)'] === 0;
+    console.log(are_they_real[0][0]['COUNT(*)']);
+    return are_they_real[0][0]['COUNT(*)'] !== 0;
 }
 
 exports.register = async function(name, email, password, city, country) {
@@ -80,14 +81,23 @@ exports.register = async function(name, email, password, city, country) {
 };
 
 exports.login = async function(email, password) {
+
+
+
     let queryString;
     let value = [];
     if (!email || !password) {
         return Promise.reject(new Error("Bad Request"));
-    } else {
-        queryString = "SELECT user_id, password FROM User WHERE email = ?";
-        value = [email]
     }
+    ///check email exists
+    let checkEmailQuery = "SELECT COUNT(*) FROM User WHERE email = ?";
+    let emailCheck = await db.getPool().query(checkEmailQuery, email);
+    emailCheck = emailCheck[0][0]['COUNT(*)'];
+    if (emailCheck === 0) {
+        return Promise.reject(new Error("Bad Request"));
+    }
+    queryString = "SELECT user_id, password FROM User WHERE email = ?";
+    value = [email]
     try {
         let response = await db.getPool().query(queryString, value);
         if (response.length === 0) {
@@ -109,7 +119,17 @@ exports.login = async function(email, password) {
 
 exports.logout = async function(token) {
 
+    //Check the user will actually be created
+    let checkTokenQuery = "SELECT COUNT(*) FROM User WHERE auth_token = ?";
+    let checkToken = await db.getPool().query(checkTokenQuery, token);
+    checkToken = checkToken[0][0]['COUNT(*)'];
+    if (checkToken === 0) {
+        return Promise.reject(new Error("Unauthorized"));
+    }
+
+    //continue
     let user = await getUser(token);
+    console.log(user);
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
     }
@@ -124,31 +144,13 @@ exports.logout = async function(token) {
 
 exports.getUserData = async function(id, token) {
     ////cover the get 'me' endpoint
-    if (id === null || id === undefined) {
-        console.log("we're here now");
-        if (!token) {
-            return Promise.reject(new Error('Bad Request'));
-        }
-        let user = await getUser(token);
-        if (!user) {
-            return Promise.reject(new Error('Bad Request'));
-        }
-        let queryString = "SELECT name, city, country, email FROM User WHERE user_id = ?";
-        try{
-            console.log(user);
-            let userData = await db.getPool().query(queryString, user);
-            console.log(userData);
 
-            if (userData.length === 0) {
-                return Promise.reject(new Error('Not Found'));
-            }
-            return Promise.resolve(userData);
-        } catch(error) {
-            // Rejecting promise as an error was thrown
-            return Promise.reject(error);
-        }
-
+    let exists = await userExists(id);
+    console.log(exists);
+    if (!exists) {
+        return Promise.reject(new Error('Not Found'));
     }
+
     let user_tokenString = "SELECT auth_token FROM User WHERE user_id = ?";
     let queryString = "SELECT name, city, country";
     let user_token = await db.getPool().query(user_tokenString, id);
