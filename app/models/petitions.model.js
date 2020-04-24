@@ -35,7 +35,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
       }
     ]
      */
-    let filters = [startIndex, count, q, categoryId, authorId, sortBy];
+    let filters = [q, categoryId, authorId];
     let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
             "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
             "FROM Petition AS p " +
@@ -47,7 +47,6 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     let notFinished = true;
     let whereAdded = false;
     let canAddAnd = false;
-    console.log(filters);
     for (let filter in filters) {
         if (!filters[filter]) {
             continue;
@@ -91,7 +90,6 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     } else {
         argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
     }
-    console.log(queryString);
     let [petitionResults] = await db.getPool().query(queryString, values);
     if (startIndex) {
         petitionResults = petitionResults.slice(startIndex);
@@ -99,7 +97,6 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     if (count) {
         petitionResults = petitionResults.slice(0, count);
     }
-    console.log(petitionResults);
     return Promise.resolve(petitionResults);
 };
 
@@ -344,7 +341,7 @@ exports.getPetitionSignatures = async function(id) {
         for (let i in response[0]) {
             petitionSignatures.push(response[0][i]);
         }
-        return Promise.resolve(petitionSignatures);
+        return Promise.resolve([petitionSignatures]);
     } catch (error) {
         console.error(error);
         return Promise.reject(error);
