@@ -361,6 +361,15 @@ exports.signPetition = async function(id, token) {
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
     }
+
+    //check if user has already signed petition
+    let petitionSigCheck = "SELECT COUNT(*) FROM Signature WHERE petition_id = ? AND signatory_id = ?";
+    let petitionCount = await db.getPool().query(petitionSigCheck, id, user);
+    petitionCount = petitionCount[0][0]['COUNT(*)'];
+    if (petitionCount !== 0) {
+        return Promise.reject(new Error("Forbidden"));
+    }
+
     ///query for adding the signature
     let queryString = "INSERT INTO Signature (user_id, petition_id, signed_date) VALUES (?,?,?)";
 
