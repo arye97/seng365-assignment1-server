@@ -1,9 +1,49 @@
 const Petitions = require('../models/petitions.model');
 const db = require('../../config/db');
 
-exports.viewAllPetitions = async function (req, res) {
 
-    await Petitions.viewAllPetitions(req.query.startIndex, req.query.count, req.query.q, req.query.categoryId, req.query.authorId, req.query.sortBy)
+exports.viewAllPetitions = async function (req, res) {
+    await Petitions.viewAllPetitions()
+        .then((rows) => {
+            let petitionRows = rows[0];
+            let petitions = [];
+            if (petitionRows) {
+                for (let i = 0; i < petitionRows.length; i++) {
+                    petitions.push(
+                        {
+                            "petitionId" : petitionRows[i]['petitionId'],
+                            "title" : petitionRows[i]['title'],
+                            "category": petitionRows[i]['category'],
+                            "authorName" : petitionRows[i]['authorName'],
+                            "signatureCount" : petitionRows[i]['signatureCount']
+                        }
+                    )
+                }
+            }
+            res.statusMessage = 'OK';
+            res.status(200);
+            res.json(petitions);
+        }, (error) => {
+            if (error.message === 'Bad Request') {
+                res.statusMessage = 'Bad Request';
+                res.status(400).send('Bad Request');
+            } else {
+                console.error(error);
+                res.statusMessage = 'Internal Server Error';
+                res.status(500).send('Internal Server Error');
+            }
+        }).catch(
+            (error) => {
+                console.error(error);
+                res.statusMessage = 'Bad Request';
+                res.status(400).send('Bad Request');
+            }
+        )
+}
+
+exports.viewAllDetailedPetitions = async function (req, res) {
+
+    await Petitions.viewAllDetailedPetitions(req.query.startIndex, req.query.count, req.query.q, req.query.categoryId, req.query.authorId, req.query.sortBy)
         .then((rows) => {
                 let petitionRows = rows[0];
                 //console.log(petitionRows);

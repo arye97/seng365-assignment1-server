@@ -23,8 +23,7 @@ async function getUser(token) {
 }
 
 
-
-exports.viewAllPetitions = async function (startIndex, count, q, categoryId, authorId, sortBy) {
+exports.viewAllDetailedPetitions = async function (startIndex, count, q, categoryId, authorId, sortBy) {
     /*
     [
       {
@@ -36,13 +35,22 @@ exports.viewAllPetitions = async function (startIndex, count, q, categoryId, aut
       }
     ]
      */
+    let queryString;
+    if (!startIndex || !count || !q || !categoryId || !authorId || !sortBy) {
+        queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
+            "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
+            "FROM Petition AS p " +
+            "INNER JOIN Category AS c ON p.category_id = c.category_id " +
+            "INNER JOIN User AS u ON p.author_id = u.user_id";
 
-    let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
-                    "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
-                    "FROM Petition AS p " +
-                    "INNER JOIN Category AS c ON p.category_id = ? " +
-                    "INNER JOIN User AS u ON p.author_id = ? ";
-
+    } else {
+        queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
+            "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
+            "FROM Petition AS p " +
+            "INNER JOIN Category AS c ON p.category_id = ? " +
+            "INNER JOIN User AS u ON p.author_id = ? " +
+            "WHERE p.petition_id >= ? AND Locate(p.title, ?)!=0";
+    }
     let argsSort;
     if (sortBy) {
         if (sortBy === 'ALPHABETICAL_ASC') {
@@ -67,7 +75,8 @@ exports.viewAllPetitions = async function (startIndex, count, q, categoryId, aut
     // }
     console.log(queryString);
     try {
-        let petitionRows = await db.getPool().query(queryString, [categoryId, authorId]);
+        console.log([categoryId, authorId, startIndex, q]);
+        let petitionRows = await db.getPool().query(queryString, [categoryId, authorId, startIndex, q]);
 
         return Promise.resolve(petitionRows);
     } catch(error) {

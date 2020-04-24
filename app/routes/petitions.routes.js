@@ -11,7 +11,7 @@ module.exports = function (app) {
         .delete(petitions.deletePetition);
 
     app.route(app.rootUrl + '/petitions')
-        .get(petitions.viewAllPetitions)
+        .get(petitions.viewAllDetailedPetitions)
         .post(petitions.addPetition);
 
     app.route(app.rootUrl + '/petitions/:id/photo')

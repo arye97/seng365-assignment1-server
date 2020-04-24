@@ -328,7 +328,7 @@ exports.getUserPhoto = async function(id, token) {
 
 exports.setUserPhoto = async function(id, token, imageRequestBody) {
 
-
+    console.log(id, token);
     if (!token) { return Promise.reject(new Error("Not Found"));}
     let user = await getUser(token);
     if (!user) { return Promise.reject(new Error("Unauthorized"));}
