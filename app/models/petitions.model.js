@@ -100,7 +100,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     console.log(queryString);
     try {
         console.log([categoryId, authorId, startIndex, q]);
-        let petitionRows = await db.getPool().query(queryString, [categoryId, authorId, startIndex, q]);
+        let [petitionRows] = await db.getPool().query(queryString, values);
         if (startIndex) {
             petitionRows = petitionRows.slice(startIndex);
         }
