@@ -35,7 +35,7 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
       }
     ]
      */
-    let filters = [startIndex, count, q, categoryId, authorId, sortBy];
+    let filters = ['startIndex', 'count', 'q', 'categoryId', 'authorId', 'sortBy'];
     let queryString = "SELECT p.petition_id AS petitionId, p.title AS title, c.name AS category, u.name AS authorName, " +
             "(SELECT COUNT(*) FROM Signature AS s WHERE p.petition_id = s.petition_id) AS signatureCount " +
             "FROM Petition AS p " +
@@ -44,7 +44,9 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
 
 
     let values = [];
+    let notFinished = true;
     let whereAdded = false;
+    let canAddAnd = false;
 
     for (let filter in filters) {
         if (!filters[filter]) {
@@ -53,21 +55,26 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
         if (!whereAdded) {
             queryString += ' WHERE ';
             whereAdded = true;
-        } else {
+        } else if (notFinished && canAddAnd){
             queryString += 'AND ';
+            canAddAnd = false;
         }
-        if (filter === 'q') {
+        if (filter === '2') {
             queryString += 'p.title LIKE ? ';
             values.push('%' + filters[filter] + '%');
-        } else if (filter === 'categoryId') {
-            queryString += 'p.category_id = ?';
+            canAddAnd = true;
+        } else if (filter === '3') {
+            queryString += 'p.category_id = ? ';
             values.push(filters[filter]);
-        } else if (filter === 'authorId') {
+            canAddAnd = true;
+        } else if (filter === '4') {
+            notFinished = false;
             queryString += 'p.author_id = ? ';
             values.push(filters[filter]);
+            canAddAnd = true;
+
         }
     }
-
     let argsSort;
     if (sortBy) {
         if (sortBy === 'ALPHABETICAL_ASC') {
