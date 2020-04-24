@@ -298,7 +298,7 @@ exports.getCategories = async function (req, res) {
                     for (let i = 0; i < categoryRows.length; i++) {
                         categories.push(
                             {
-                                "category_id" : categoryRows[i]['category_id'],
+                                "categoryId" : categoryRows[i]['category_id'],
                                 "name" : categoryRows[i]['name']
                             }
                         )
