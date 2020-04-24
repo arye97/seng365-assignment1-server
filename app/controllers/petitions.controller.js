@@ -25,7 +25,7 @@ exports.viewAllDetailedPetitions = async function (req, res) {
                 }
                 res.statusMessage = 'OK';
                 res.status(200);
-                res.json([petitions]);
+                res.json(petitions);
             }, (error) => {
                 if (error.message === 'Bad Request') {
                     res.statusMessage = 'Bad Request';
