@@ -58,15 +58,15 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
             queryString += 'AND ';
             canAddAnd = false;
         }
-        if (filter === '2') {
+        if (filter === '0') {
             queryString += 'p.title LIKE ? ';
             values.push('%' + filters[filter] + '%');
             canAddAnd = true;
-        } else if (filter === '3') {
+        } else if (filter === '1') {
             queryString += 'p.category_id = ? ';
             values.push(filters[filter]);
             canAddAnd = true;
-        } else if (filter === '4') {
+        } else if (filter === '2') {
             notFinished = false;
             queryString += 'p.author_id = ? ';
             values.push(filters[filter]);
@@ -90,6 +90,8 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
     } else {
         argsSort = ' ORDER BY signatureCount DESC, petitionId ASC';
     }
+
+    console.log(queryString);
     let [petitionResults] = await db.getPool().query(queryString, values);
     if (startIndex) {
         petitionResults = petitionResults.slice(startIndex);
