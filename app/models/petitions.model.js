@@ -85,9 +85,18 @@ exports.viewAllDetailedPetitions = async function (startIndex, count, q, categor
 };
 
 exports.addNewPetition = async function (petitionBody, token) {
+
     if (!token) {
         return Promise.reject(new Error("Unauthorized"));
     }
+    //Check if the user is an actual person
+    let userCheckQuery = "SELECT COUNT(*) FROM User WHERE auth_token = ?";
+    let userCheck = await db.getPool().query(userCheckQuery, token);
+    userCheck = userCheck[0][0]['COUNT(*)'];
+    if (userCheck === 0) {
+        return Promise.reject(new Error('Unauthorized'));
+    }
+
     let user = await getUser(token);
     console.log(user);
     if (!user) {
@@ -151,13 +160,32 @@ exports.getOnePetition = async function (id) {
 };
 
 exports.changePetition = async function (petitionBody, id, token) {
+
+    console.log(id, token);
     if (!token) {
         return Promise.reject(new Error("Unauthorized"))
+    }
+    //check if user is possible
+    //Check if the user is an actual person
+    let userCheckQuery = "SELECT COUNT(*) FROM User WHERE auth_token = ?";
+    let userCheck = await db.getPool().query(userCheckQuery, token);
+    userCheck = userCheck[0][0]['COUNT(*)'];
+    if (userCheck === 0) {
+        return Promise.reject(new Error('Unauthorized'));
     }
     let user = await getUser(token);
     if (!user) {
         return Promise.reject(new Error("Unauthorized"));
     }
+
+    //check if author is same as user
+    let authorQuery = "SELECT COUNT(*) FROM Petition WHERE author_id = ? AND petition_id = ?";
+    let authorCheck = await db.getPool().query(authorQuery, [user, id]);
+    authorCheck = authorCheck[0][0]['COUNT(*)'];
+    if (authorCheck === 0) {
+        return Promise.reject(new Error("Forbidden"));
+    }
+
     /*
     petitionBody =
     {
@@ -167,6 +195,7 @@ exports.changePetition = async function (petitionBody, id, token) {
           "closingDate": "2012-04-23 18:25:43.511"
     }
      */
+    console.log(petitionBody);
     let title = petitionBody['title'];
     let description = petitionBody['description'];
     let categoryId = petitionBody['categoryId'];

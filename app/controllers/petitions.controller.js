@@ -411,7 +411,7 @@ exports.changeDetails = async function (req, res) {
     await Petitions.changePetition(petitionBody, req.params.id, req.headers['x-authorization'])
         .then((result) => {
             res.statusMessage = 'OK';
-            res.status(200);
+            res.status(200).send('Petition Updated');
         },
         (error) => {
             console.error(error);
