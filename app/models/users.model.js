@@ -293,18 +293,6 @@ deleteUserPhoto
  */
 
 exports.getUserPhoto = async function(id, token) {
-    let user;
-    let isNull = false;
-    if (id === null || id === undefined || id === 'null') {
-        isNull = true;
-        if (!token) {
-            return Promise.reject(new Error('Unauthorized'));
-        }
-        user = await getUser(token);
-        if (!user) {
-            return Promise.reject(new Error('Not Found'));
-        }
-    }
 
     let queryString = "SELECT photo_filename FROM User WHERE user_id = ?";
     try {
@@ -327,8 +315,10 @@ exports.getUserPhoto = async function(id, token) {
 };
 
 exports.setUserPhoto = async function(id, token, imageRequestBody) {
-
+    console.log('hheeeeere we are');
+    console.log(fileType(imageRequestBody)['ext']);
     console.log(id, token);
+    console.log('omg pls');
     if (!token) { return Promise.reject(new Error("Not Found"));}
     let user = await getUser(token);
     if (!user) { return Promise.reject(new Error("Unauthorized"));}
@@ -336,7 +326,9 @@ exports.setUserPhoto = async function(id, token, imageRequestBody) {
 
     //check if a user doesnt already have a photo
 
-
+    if (fileType(imageRequestBody)['ext'] !== ('.png' || '.jpg' || '.jpeg' || '.gif')) {
+        return Promise.reject(new Error("Bad Request"))
+    }
     let filename = "petition" + id + fileType(imageRequestBody)['ext'];
     let checkPhotoQuery = "SELECT photo_filename FROM User WHERE user_id = ?";
     let updateQuery = "UPDATE User SET photo_filename = ? WHERE user_id = ?";
